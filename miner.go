@@ -1,73 +1,92 @@
 package main
 
 import (
-  "math/rand"
-  "sync/atomic"
-  "time"
+	"fmt"
+	"math/rand"
+	"sync/atomic"
 )
 
 type Miner struct {
-  nonceOffset uint64
-  maxTries uint64
-  transactionsUpdated uint64
+	name int8
 
-  recvBlock chan Block
-  sendBlock chan Block
+	nonceOffset         uint64
+	maxTries            uint64
+	transactionsUpdated uint64
+
+	recvBlock chan Block
+	sendBlock chan Block
 }
 
 func (m *Miner) Start() {
-  // Set a random offset.
-  rand.Seed(time.Now().UnixNano())
-  m.nonceOffset = rand.Uint64()
+	// Set a random offset.
+	m.nonceOffset = rand.Uint64()
 
-  // Process any received blocks.
-  for block := range m.recvBlock {
-    atomic.AddUint64(&m.transactionsUpdated, 1)
-    go m.mineBlock(&block)
-  }
+	// Process any received blocks.
+	for blocktx := range m.recvBlock {
+		if !blocktx.valid {
+			fmt.Println("Received invalid block")
+			continue
+		}
+
+		atomic.AddUint64(&m.transactionsUpdated, 1)
+
+		// Create a new block, following the received block.
+		newBlock := Block{
+			BlockData: BlockData{
+				version:       VERSION,
+				hashPrevBlock: blocktx.hash(),
+				data:          m.name,
+				difficulty:    blocktx.difficulty,
+			},
+			valid: false,
+		}
+
+		go m.mineBlock(&newBlock)
+	}
 }
 
 // also from pow.cpp:74
 func (m *Miner) mineBlock(block *Block) bool {
-  var negative bool
-  var overflow bool
-  var target uint256
-  target.SetCompact(block.bits, &negative, &overflow)
+	var target uint256
+	target.SetDifficulty(block.difficulty)
 
-  if negative || target.CmpUint64(0) == 0 || overflow {
-    return false
-  }
+	fmt.Println(m.name, "mining with prev", block.hashPrevBlock.ToShortString())
+	if target.CmpUint64(0) == 0 {
+		fmt.Println("Invalid target")
+		return false
+	}
 
-  // Start testing at the miner's nonceOffset.
-  block.nonce = m.nonceOffset
+	// Start testing at the miner's nonceOffset.
+	block.nonce = m.nonceOffset
 
-  
-  transactionsUpdatedLast := m.transactionsUpdated
+	// Store the current number of transactions.
+	transactionsUpdatedLast := m.transactionsUpdated
 
-  remTries := m.maxTries
+	remTries := m.maxTries
 
-  for remTries > 0 {
-    hash := block.hash()
+	for remTries > 0 {
+		hash := block.hash()
 
-    if hash.Cmp(&target) < 1 { // hash <= target
-      // A nonce was found.
+		if hash.Cmp(&target) < 1 { // hash <= target
+			// A nonce was found.
+			fmt.Printf("Miner %d found a block with nonce %d.\n", m.name, block.nonce)
+			m.sendBlock <- *block
+			return true
+		}
 
-      block.nonce = block.nonce
-      m.sendBlock <- *block
-      return true
-    }
+		block.nonce += 1
+		remTries -= 1
 
-    block.nonce += 1
-    remTries -= 1
+		// Check for new transactions every few seconds.
+		if (block.nonce & 0x3ffff) == 0 {
+			if atomic.LoadUint64(&m.transactionsUpdated) != transactionsUpdatedLast {
+				fmt.Printf("Miner %d aborting because new transaction received.\n", m.name)
+				return false
+			}
+			fmt.Println(m.name, "mining... current nonce:", block.nonce)
+		}
+	}
+	fmt.Println(m.name, "quit")
 
-    // Check for new transactions every few seconds.
-    if (block.nonce & 0x3ffff) == 0 {
-
-      if atomic.LoadUint64(&m.transactionsUpdated) != transactionsUpdatedLast {
-        return false
-      }
-    }
-  }
-  
-  return false
+	return false
 }
