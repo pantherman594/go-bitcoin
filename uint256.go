@@ -20,7 +20,7 @@ func (u *uint256) Zero() {
 
 func (u *uint256) FromUint64(o uint64) {
 	u.Zero()
-	u[WIDTH - 1] = o
+	u[WIDTH-1] = o
 }
 
 // Convert an array of 32 bytes into an array of 4 uint64.
@@ -75,7 +75,7 @@ func (u *uint256) LShift(n int) {
 	////   000000ZZ [ZZ000000] 00000000  00000000
 	//// i = 3
 	//// 0000XXYY >> (64 - shift) = 000000XX
-	////   000000ZZ [ZZ0000XX] YY000000  00000000 
+	////   000000ZZ [ZZ0000XX] YY000000  00000000
 	//// 0000XXYY << shift = YY000000
 	////   000000ZZ  ZZ000000 [YY000000] 00000000
 }
