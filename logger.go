@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
 
 type Logger struct {
-	blocks map[uint256]Block
+	blocks    map[uint256]Block
+	lastTime  time.Time
+	bestChain uint64
 
 	minWorkRequired uint256
-
-	recvBlock  chan Block
-	sendBlocks []chan Block
-	bestChain  uint64
+	recvBlock       chan Block
+	sendBlocks      []chan Block
 }
 
 func (l *Logger) Start(startingDifficulty uint8) {
@@ -29,6 +30,7 @@ func (l *Logger) Start(startingDifficulty uint8) {
 
 	// Send the new block to all miners.
 	l.sendBlock(&initialBlock)
+	l.lastTime = time.Now()
 
 	// Process received solutions.
 	for block := range l.recvBlock {
@@ -103,22 +105,25 @@ func (l *Logger) processBlock(block *Block) error {
 	fmt.Print("\n\n\n")
 	fmt.Println("======================")
 	fmt.Println("Puzzle solved with hash", hash.ToString())
+	fmt.Println("Time:", time.Since(l.lastTime))
 	fmt.Println("Difficulty:", target.ToShortString())
 	fmt.Println()
-	fmt.Println("Chain to current:")
+	fmt.Print("Chain to current:")
 
 	// Print out all the hashes in the chain.
 	prev = *block
 	found = true
 	for found {
 		hash := prev.hash()
-		fmt.Println((&hash).ToShortString())
+		fmt.Print("\n", (&hash).ToShortString())
 		prev, found = l.blocks[prev.hashPrevBlock]
 	}
-	fmt.Println("(ROOT)")
+	fmt.Println(" (initial)")
 
 	fmt.Println("======================")
 	fmt.Print("\n\n\n")
+
+	l.lastTime = time.Now()
 
 	// Send the block to all miners.
 	l.sendBlock(block)

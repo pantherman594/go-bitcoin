@@ -24,7 +24,6 @@ func (u *uint256) FromUint64(o uint64) {
 }
 
 // Convert an array of 32 bytes into an array of 4 uint64.
-// If a, b, c, etc are bytes: abcdefghijklmnopqrstuvwx... -> ... qrstuvwx ijklmnop abcdefgh
 func (u *uint256) FromBytes(b [sha256.Size]byte) {
 	u.Zero()
 	for i := 0; i < WIDTH; i++ {
@@ -32,7 +31,8 @@ func (u *uint256) FromBytes(b [sha256.Size]byte) {
 	}
 }
 
-// From arith_uint256.cpp:20
+// LShift computes a left bit shift.
+// From https://github.com/bitcoin/bitcoin/blob/master/src/arith_uint256.cpp#L21
 func (u *uint256) LShift(n int) {
 	tmp := *u
 
@@ -50,7 +50,8 @@ func (u *uint256) LShift(n int) {
 	}
 }
 
-// From arith_uint256.cpp:37
+// RShift computes a right bit shift.
+// From https://github.com/bitcoin/bitcoin/blob/master/src/arith_uint256.cpp#L38
 func (u *uint256) RShift(n int) {
 	tmp := *u
 
@@ -68,7 +69,8 @@ func (u *uint256) RShift(n int) {
 	}
 }
 
-// From arith_uint256.cpp:108
+// Cmp compares two hash values.
+// From https://github.com/bitcoin/bitcoin/blob/master/src/arith_uint256.cpp#L109
 func (a *uint256) Cmp(b *uint256) int {
 	for i := WIDTH - 1; i >= 0; i-- {
 		switch {
@@ -82,21 +84,28 @@ func (a *uint256) Cmp(b *uint256) int {
 	return 0
 }
 
+// CmpUint64 compares the current hash value with a 64-bit integer.
 func (a *uint256) CmpUint64(b uint64) int {
 	var b256 uint256
 	b256.FromUint64(b)
 	return a.Cmp(&b256)
 }
 
+// SetDifficulty sets the difficulty, by setting the target hash to 2^difficulty.
+// Inspired by https://github.com/bitcoin/bitcoin/blob/master/src/arith_uint256.h#L277
+// and https://github.com/bitcoin/bitcoin/blob/v0.1.5/bignum.h#L257, but severely
+// simplified.
 func (u *uint256) SetDifficulty(difficulty uint8) {
 	u.FromUint64(1)
 	u.LShift(int(difficulty))
 }
 
+// ToShortString converts the first 64 bits of a uint256 to a hex string.
 func (u *uint256) ToShortString() string {
 	return fmt.Sprintf("%016x", u[3])
 }
 
+// ToString converts a uint256 to a hex string.
 func (u *uint256) ToString() (s string) {
 	for _, n := range u {
 		s = fmt.Sprintf("%016x", n) + s

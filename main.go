@@ -64,8 +64,9 @@ func main() {
 		"The number of miners in the network.")
 	difficulty := flag.Int("d", 233,
 		"The difficulty, higher is easier, where the hash must be less than or equal to 2^difficulty. Max value is 255.")
+	flag.BoolVar(&faulty, "faulty", false,
+		"Simulates faulty miners (sending repeat solutions, setting an invalid previous hash, sending an unsolved puzzle, setting an incorrect difficulty, and sending a falsely \"valid\" block).")
 	flag.BoolVar(&debug, "debug", false, "Enable extra debug printing.")
-	flag.BoolVar(&faulty, "faulty", false, "Simulate faulty nodes.")
 
 	flag.Parse()
 
