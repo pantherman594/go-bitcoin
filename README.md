@@ -1,7 +1,7 @@
 go-bitcoin
 =====
 
-_Bitcoin-inspired miner and tamper-resitant-log written in go_
+_Bitcoin-inspired miner and tamper-resistant-log written in go_
 
 David Shen, Jack Wiseman, Joon Park
 
@@ -9,7 +9,7 @@ Description
 -----------
 
 **go-bitcoin** uses goroutines to communicate between a number of miners and
-a central logger that maintains a tamper-reistant log. The miners attempt to
+a central logger that maintains a tamper-resistant log. The miners attempt to
 solve a given hash puzzle by finding a nonce that creates a hash value less
 than a certain target, and the logger validates it, adds it to its chain, and
 relays it to the other miners.
@@ -54,7 +54,7 @@ How it works
 
 ### Overview
 
-![Diagram showing how gogossip works.](img/diagram.png)
+![Diagram showing how go-bitcoin works.](img/diagram.png)
 
 ### Data Structures
 
@@ -154,7 +154,7 @@ and start the [miners](miner.go) and [logger](logger.go).
 
 #### block.go
 
-[block.go](block.go) defines the Block struct and toBytes() function, which converts the Block into a slice of bytes. The hash() function implements the toBytes() function to hash the data in the Block using sha-256.
+[block.go](block.go) defines the Block struct and toBytes() function, which converts the Block into a slice of bytes. The hash() function implements the toBytes() function to hash the data in the Block using SHA-256.
 
 #### uint256.go
 
@@ -168,11 +168,11 @@ and start the [miners](miner.go) and [logger](logger.go).
 
 [logger.go](logger.go) contains the code for the logger. This sends out an initial block, and then listens for solutions. When one is received and verified to be new and correct, it is added to the `blocks` map which contains all received hash es and blocks. If the new block creates the new longest chain, it is relayed to all the miners for a new puzzle.
 
-### Similarities to [bitcoin/bitcoin](https://github.com/bitcoin/bitcoin/tree/master/) and the [original implementation](https://github.com/bitcoin/bitcoin/tree/v0.1.5/)
+### Similarities to [bitcoin/bitcoin](https://github.com/bitcoin/bitcoin/tree/master/) and the [original bitcoin implementation](https://github.com/bitcoin/bitcoin/tree/v0.1.5/)
 
 _More details and line numbers are in the comments._
 
-- Utilizes double hashing with sha-256 to prevent length extension attacks.
+- Utilizes double hashing with SHA-256 to prevent length extension attacks.
 - If hash <= target, and no other miner has solved the current block, then the block is processed.
 - If the tested hash does not meet target requirement, then the miner increments the nonce. From there, if nonce * 0x3ffff == 0, the network is tested to see if it is still operating. If all nonces have been checked, the mining process for the specific block ends. If a new block is proposed by the logger, the mining process for the specific block ends. Finally, block time is updated.
 - During block processing, if the block already exists (the logger has already appended the block to the block chain), then the mining for the block ends. If the block is proven invalid, then the mining ends. If the block meets regulated requirements, then it is accepted.
