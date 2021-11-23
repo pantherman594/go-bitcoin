@@ -15,12 +15,12 @@ type BlockData struct {
 }
 
 type Block struct {
-	BlockData
-	valid bool
-	height uint64
+	BlockData // integrate the fields and methods of BlockData, but hash only hashes the fields in BlockData
+	valid     bool
+	height    uint64
 }
 
-// toBytes converts the Block struct into a slice of bytes.
+// toBytes converts the BlockData struct into a slice of bytes.
 func (b *BlockData) toBytes() []byte {
 	var buf bytes.Buffer
 	err := binary.Write(&buf, binary.LittleEndian, b)
@@ -31,12 +31,12 @@ func (b *BlockData) toBytes() []byte {
 	return buf.Bytes()
 }
 
-// hash double-sha256 hashes the data in the Block. Double hashing, as also
-// done in the original bitcoin code (main.cpp:2341), prevents length extension
-// attacks.
+// hash double-sha256 hashes the data in the BlockData. Double hashing is done to
+// prevent length extension attacks.
+// From https://github.com/bitcoin/bitcoin/blob/v0.1.5/main.cpp#L2341
+// and https://github.com/bitcoin/bitcoin/blob/master/src/hash.h#L122
 func (b *BlockData) hash() (u uint256) {
 	hash1 := sha256.Sum256(b.toBytes())
-
 	u.FromBytes(sha256.Sum256(hash1[:]))
 	return
 }

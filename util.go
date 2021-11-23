@@ -6,10 +6,12 @@ import (
 	"fmt"
 )
 
-const WIDTH = 4
+const WIDTH = 4 // 256 (sha256) / 64 (uint64) = 4
 
+// Stores a 256-bit number in uint64 numbers.
 type uint256 [WIDTH]uint64
 
+// Zeros out the entire uint256
 func (u *uint256) Zero() {
 	for i := 0; i < WIDTH; i++ {
 		u[i] = 0
@@ -21,10 +23,12 @@ func (u *uint256) FromUint64(o uint64) {
 	u[0] = o
 }
 
+// Convert an array of 32 bytes into an array of 4 uint64.
+// If a, b, c, etc are bytes: abcdefghijklmnopqrstuvwx... -> ... qrstuvwx ijklmnop abcdefgh
 func (u *uint256) FromBytes(b [sha256.Size]byte) {
 	u.Zero()
 	for i := 0; i < WIDTH; i++ {
-		u[i] = binary.LittleEndian.Uint64(b[i*8 : (i+1)*8])
+		u[WIDTH-i-1] = binary.BigEndian.Uint64(b[i*8 : (i+1)*8])
 	}
 }
 
