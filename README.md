@@ -3,7 +3,7 @@ go-bitcoin
 
 _Bitcoin-inspired miner and tamper-resistant-log written in go_
 
-David Shen, Jack Wiseman, Joon Park
+David Shen, Joon Park
 
 Description
 -----------
@@ -14,16 +14,16 @@ solve a given hash puzzle by finding a nonce that creates a hash value less
 than a certain target, and the logger validates it, adds it to its chain, and
 relays it to the other miners.
 
-This program keeps running once started, without any set end. Statuses are
-printed whenever a block is successfully mined, but to quit the program you
-can press Ctrl+C.
+This program keeps running once started until the number of blocks requested are
+mined. Statuses are printed whenever a block is successfully mined, and the program
+can be canelled at any time by pressing Ctrl+C.
 
 Usage
 -----
 
 In a terminal, run:
 
-`go run . [-n miners] [-d difficulty] [-faulty] [-debug]`
+`go run . [-n miners] [-d difficulty] [-l blocks_to_mine] [-faulty] [-debug] [-quiet]`
 
 Options
 -------
@@ -36,6 +36,10 @@ The number of miners in the network. (default 20)
 
 The difficulty, higher is easier, where the hash must be less than or equal to 2^_difficulty_. Max value is 255. (default 233)
 
+#### -l _blocks_to_mine_
+
+Limits the number of blocks to mine before quitting. A number less than 1 allows the program to continue infinitely, requiring a Ctrl+C to quit.
+
 #### -faulty
 
 Simulates faulty miners (sending repeat solutions, setting an invalid previous hash, sending an unsolved puzzle, setting an incorrect difficulty, and sending a falsely "valid" block).
@@ -43,6 +47,10 @@ Simulates faulty miners (sending repeat solutions, setting an invalid previous h
 #### -debug
 
 Enables extra debug printing.
+
+#### -quiet
+
+Disables printing.
 
 Example runs
 ------------

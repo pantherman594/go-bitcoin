@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -13,9 +14,21 @@ type Logger struct {
 	minWorkRequired uint256
 	recvBlock       chan Block
 	sendBlocks      []chan Block
+
+	durations chan time.Duration
+	minersClosed chan struct{}
+	closed    chan struct{}
+	minerWg   *sync.WaitGroup
+	closeWg   *sync.WaitGroup
 }
 
 func (l *Logger) Start(startingDifficulty uint8) {
+	defer l.closeWg.Done()
+
+	if l.closed == nil {
+		l.closed = make(chan struct{})
+	}
+
 	// Create an initial block.
 	initialBlock := Block{
 		BlockData: BlockData{
@@ -33,12 +46,42 @@ func (l *Logger) Start(startingDifficulty uint8) {
 	l.lastTime = time.Now()
 
 	// Process received solutions.
-	for block := range l.recvBlock {
-		// Check and add the block to the chain.
-		err := l.processBlock(&block)
-		if err != nil {
-			fmt.Println("Invalid block received:", err)
-			continue
+loop:
+	for {
+		select {
+		case _, ok := <-l.closed:
+			if !ok {
+				break loop
+			}
+		case block, ok := <-l.recvBlock:
+			if !ok {
+				break loop
+			}
+
+			// Check and add the block to the chain.
+			err := l.processBlock(&block)
+			if err != nil {
+				if !quiet {
+					fmt.Println("Invalid block received:", err)
+				}
+			}
+		}
+	}
+
+	close(l.minersClosed)
+	done := make(chan struct{})
+	go func(ch chan struct{}, wg *sync.WaitGroup) {
+		wg.Wait()
+		done <- struct{}{}
+	}(done, l.minerWg)
+
+	// Clear the recvBlock channel.
+	for {
+		select {
+		case <-l.recvBlock:
+		case <-done:
+			// Finish when all miners are done
+			return
 		}
 	}
 }
@@ -100,28 +143,37 @@ func (l *Logger) processBlock(block *Block) error {
 	}
 
 	l.bestChain = block.height
-
-	// Print a status of the current longest chain.
-	fmt.Print("\n\n\n")
-	fmt.Println("======================")
-	fmt.Println("Puzzle solved with hash", hash.ToString())
-	fmt.Println("Time:", time.Since(l.lastTime))
-	fmt.Println("Difficulty:", target.ToShortString())
-	fmt.Println()
-	fmt.Print("Chain to current:")
-
-	// Print out all the hashes in the chain.
-	prev = *block
-	found = true
-	for found {
-		hash := prev.hash()
-		fmt.Print("\n", (&hash).ToShortString())
-		prev, found = l.blocks[prev.hashPrevBlock]
+	timeNeeded := time.Since(l.lastTime)
+	if l.durations != nil {
+		select {
+		case l.durations <- timeNeeded:
+		default:
+		}
 	}
-	fmt.Println(" (initial)")
 
-	fmt.Println("======================")
-	fmt.Print("\n\n\n")
+	if !quiet {
+		// Print a status of the current longest chain.
+		fmt.Print("\n\n\n")
+		fmt.Println("======================")
+		fmt.Println("Puzzle solved with hash", hash.ToString())
+		fmt.Println("Time:", timeNeeded)
+		fmt.Println("Difficulty:", target.ToShortString())
+		fmt.Println()
+		fmt.Print("Chain to current:")
+
+		// Print out all the hashes in the chain.
+		prev = *block
+		found = true
+		for found {
+			hash := prev.hash()
+			fmt.Print("\n", (&hash).ToShortString())
+			prev, found = l.blocks[prev.hashPrevBlock]
+		}
+		fmt.Println(" (initial)")
+
+		fmt.Println("======================")
+		fmt.Print("\n\n\n")
+	}
 
 	l.lastTime = time.Now()
 
